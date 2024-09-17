@@ -45,7 +45,6 @@ typedef struct {
 
 static const KeyDef key_defs[] = {
     {"'", KEY_APOSTROPHE},
-    {",", KEY_COMMA},
     {"-", KEY_MINUS},
     {".", KEY_PERIOD},
     {"/", KEY_SLASH},
@@ -67,6 +66,7 @@ static const KeyDef key_defs[] = {
     {"backspace", KEY_BACKSPACE},
     {"c", KEY_C},
     {"caps-lock", KEY_CAPS_LOCK},
+    {"comma", KEY_COMMA},
     {"d", KEY_D},
     {"delete", KEY_DELETE},
     {"down", KEY_DOWN},
@@ -586,25 +586,25 @@ static Texture2D *jaylib_gettexture2d(const Janet *argv, int32_t n) {
 }
 
 int texture2d_get(void* p, Janet key, Janet *out) {
-	Texture2D *texture = (Texture2D *) p;
-	
-	if (!janet_checktype(key, JANET_KEYWORD)) {
-		janet_panic("expected keyword");
-	}
+    Texture2D *texture = (Texture2D *) p;
+    
+    if (!janet_checktype(key, JANET_KEYWORD)) {
+        janet_panic("expected keyword");
+    }
 
-	const uint8_t *kw = janet_unwrap_keyword(key);
+    const uint8_t *kw = janet_unwrap_keyword(key);
 
-	if (!janet_cstrcmp(kw, "width")) {
-		*out = janet_wrap_integer(texture->width);
-		return 1;
-	}
-	
-	if (!janet_cstrcmp(kw, "height")) {
-		*out = janet_wrap_integer(texture->height);
-		return 1;
-	}
-	
-	return 0;
+    if (!janet_cstrcmp(kw, "width")) {
+        *out = janet_wrap_integer(texture->width);
+        return 1;
+    }
+    
+    if (!janet_cstrcmp(kw, "height")) {
+        *out = janet_wrap_integer(texture->height);
+        return 1;
+    }
+    
+    return 0;
 }
 
 static const JanetAbstractType AT_Image = {

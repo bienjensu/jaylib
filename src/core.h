@@ -671,6 +671,13 @@ static Janet cfun_GetMouseY(int32_t argc, Janet *argv) {
     return janet_wrap_integer(GetMouseY());
 }
 
+static Janet cfun_GetMouseDelta(int32_t argc, Janet *argv) {
+    (void) argv;
+    janet_fixarity(argc, 0);
+    Vector2 pos = GetMouseDelta();
+    return jaylib_wrap_vec2(pos);
+}
+
 static Janet cfun_GetMousePosition(int32_t argc, Janet *argv) {
     (void) argv;
     janet_fixarity(argc, 0);
@@ -1291,6 +1298,10 @@ static JanetReg core_cfuns[] = {
         "(set-mouse-position x y)\n\n" 
         "Set mouse position XY"
     },
+    {"get-mouse-delta", cfun_GetMouseDelta, 
+        "(get-mouse-delta)\n\n" 
+        "Get mouse delta between frames [X Y]"
+    },
     {"set-mouse-offset", cfun_SetMouseOffset, 
         "(set-mouse-offset offset-x offset-y)\n\n" 
         "Set mouse offset"
@@ -1365,8 +1376,9 @@ static JanetReg core_cfuns[] = {
         " - :position   = Camera position \n"
         " - :target     = Camera target it looks-at \n"
         " - :up         = Camera up vector (rotation over its axis) \n"
+        " - :fovy or \n"
         " - :fov-y      = Camera field-of-view apperture in Y (degrees) in perspective, used as near plane width in orthographic \n"
-        " - :projection = Camera projection: CAMERA\\_PERSPECTIVE or CAMERA\\_ORTHOGRAPHIC \n"
+        " - :type       = Camera projection type: CAMERA\\_PERSPECTIVE or CAMERA\\_ORTHOGRAPHIC \n"
     },
     {"update-camera", cfun_UpdateCamera, 
         "(update-camera camera mode)\n\n" 
