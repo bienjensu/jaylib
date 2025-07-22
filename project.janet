@@ -35,7 +35,8 @@
             "_DARWIN_C_SOURCE" (if (= o :macos) "1" nil)
             "_GNU_SOURCE" true
             "SUPPORT_FILEFORMAT_BMP" true
-            "STB_IMAGE_IMPLEMENTATION" true}
+            "STB_IMAGE_IMPLEMENTATION" true
+            "GRAPHICS_API_OPENGL_21" true}
 
   :source ["src/main.c"
            # raylib sources
