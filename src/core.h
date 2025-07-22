@@ -671,6 +671,13 @@ static Janet cfun_GetMouseY(int32_t argc, Janet *argv) {
     return janet_wrap_integer(GetMouseY());
 }
 
+static Janet cfun_GetMouseDelta(int32_t argc, Janet *argv) {
+    (void) argv;
+    janet_fixarity(argc, 0);
+    Vector2 pos = GetMouseDelta();
+    return jaylib_wrap_vec2(pos);
+}
+
 static Janet cfun_GetMousePosition(int32_t argc, Janet *argv) {
     (void) argv;
     janet_fixarity(argc, 0);
@@ -713,6 +720,27 @@ static Janet cfun_GetMouseWheelMoveV(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 0);
     Vector2 mov = GetMouseWheelMoveV();
     return jaylib_wrap_vec2(mov);
+}
+
+static Janet cfun_GetMouseRay(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+    Vector2 mousePosition = jaylib_getvec2(argv, 0);
+    Camera3D *camera = jaylib_getcamera3d(argv, 1);
+    return jaylib_wrap_ray(GetMouseRay(mousePosition, *camera));
+}
+
+static Janet cfun_GetWorldToScreen(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+    Vector3 position = jaylib_getvec3(argv, 0);
+    Camera3D *camera = jaylib_getcamera3d(argv, 1);
+    return jaylib_wrap_vec2(GetWorldToScreen(position, *camera));
+}
+
+static Janet cfun_GetCameraMatrix(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 1);
+    Camera3D *camera = jaylib_getcamera3d(argv, 1);
+    Matrix matrix = GetCameraMatrix(*camera);
+    return jaylib_wrap_matrix(matrix);
 }
 
 static Janet cfun_GetTouchX(int32_t argc, Janet *argv) {
@@ -820,7 +848,8 @@ static Janet cfun_Camera3D(int32_t argc, Janet *argv) {
             camera->position = jaylib_getvec3(argv, i + 1);
         } else if (!janet_cstrcmp(kw, "up")) {
             camera->up = jaylib_getvec3(argv, i + 1);
-        } else if (!janet_cstrcmp(kw, "fovy")) {
+        } else if (!janet_cstrcmp(kw, "fovy") ||
+                   !janet_cstrcmp(kw, "fov-y")) {
             camera->fovy = (float) janet_getnumber(argv, i + 1);
         } else if (!janet_cstrcmp(kw, "type")) {
             const uint8_t *cameraType = janet_getkeyword(argv, i + 1);
@@ -897,6 +926,49 @@ static Janet cfun_UpdateCameraPro(int32_t argc, Janet *argv) {
     UpdateCameraPro(camera, movement, rotation, zoom);
     return janet_wrap_nil();
 }
+
+static Janet cfun_GetCamera3dPosition(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 1);
+    Camera3D *camera = jaylib_getcamera3d(argv, 0);
+    return jaylib_wrap_vec3(camera->position);
+}
+
+static Janet cfun_SetCamera3dPosition(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+    Camera3D *camera = jaylib_getcamera3d(argv, 0);
+    Vector3 v3 = jaylib_getvec3(argv, 1);
+    camera->position = v3;
+    return janet_wrap_nil();
+}
+
+static Janet cfun_GetCamera3dTarget(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 1);
+    Camera3D *camera = jaylib_getcamera3d(argv, 0);
+    return jaylib_wrap_vec3(camera->target);
+}
+
+static Janet cfun_SetCamera3dTarget(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+    Camera3D *camera = jaylib_getcamera3d(argv, 0);
+    Vector3 v3 = jaylib_getvec3(argv, 1);
+    camera->target = v3;
+    return janet_wrap_nil();
+}
+
+static Janet cfun_GetCamera3dUp(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 1);
+    Camera3D *camera = jaylib_getcamera3d(argv, 0);
+    return jaylib_wrap_vec3(camera->up);
+}
+
+static Janet cfun_SetCamera3dUp(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+    Camera3D *camera = jaylib_getcamera3d(argv, 0);
+    Vector3 v3 = jaylib_getvec3(argv, 1);
+    camera->up = v3;
+    return janet_wrap_nil();
+}
+
 
 static Janet cfun_BeginScissorMode(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 4);
@@ -1226,6 +1298,10 @@ static JanetReg core_cfuns[] = {
         "(set-mouse-position x y)\n\n" 
         "Set mouse position XY"
     },
+    {"get-mouse-delta", cfun_GetMouseDelta, 
+        "(get-mouse-delta)\n\n" 
+        "Get mouse delta between frames [X Y]"
+    },
     {"set-mouse-offset", cfun_SetMouseOffset, 
         "(set-mouse-offset offset-x offset-y)\n\n" 
         "Set mouse offset"
@@ -1300,8 +1376,9 @@ static JanetReg core_cfuns[] = {
         " - :position   = Camera position \n"
         " - :target     = Camera target it looks-at \n"
         " - :up         = Camera up vector (rotation over its axis) \n"
+        " - :fovy or \n"
         " - :fov-y      = Camera field-of-view apperture in Y (degrees) in perspective, used as near plane width in orthographic \n"
-        " - :projection = Camera projection: CAMERA\\_PERSPECTIVE or CAMERA\\_ORTHOGRAPHIC \n"
+        " - :type       = Camera projection type: CAMERA\\_PERSPECTIVE or CAMERA\\_ORTHOGRAPHIC \n"
     },
     {"update-camera", cfun_UpdateCamera, 
         "(update-camera camera mode)\n\n" 
@@ -1321,5 +1398,15 @@ static JanetReg core_cfuns[] = {
         "(end-scissor-mode)\n\n"
         "Ends scissor mode. See `begin-scissor-mode`."
     },
+    {"get-mouse-ray", cfun_GetMouseRay, NULL},
+    {"get-world->screen", cfun_GetWorldToScreen, NULL},
+    {"get-camera-matrix", cfun_GetCameraMatrix, NULL},
+    {"update-camera", cfun_UpdateCamera, NULL},
+    {"get-camera-position", cfun_GetCamera3dPosition, NULL},
+    {"set-camera-position", cfun_SetCamera3dPosition, NULL},
+    {"get-camera-target", cfun_GetCamera3dTarget, NULL},
+    {"set-camera-target", cfun_SetCamera3dTarget, NULL},
+    {"get-camera-up", cfun_GetCamera3dUp, NULL},
+    {"set-camera-up", cfun_SetCamera3dUp, NULL},
     {NULL, NULL, NULL}
 };

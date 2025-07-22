@@ -158,7 +158,6 @@ static Janet cfun_DrawTextCodepoints(int32_t argc, Janet *argv) {
     return janet_wrap_nil();
 }
 
-
 static Janet cfun_MeasureText(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
     const char *text = jaylib_getcstring(argv, 0);

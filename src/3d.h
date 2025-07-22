@@ -372,11 +372,18 @@ static Janet cfun_UnloadMaterial(int32_t argc, Janet *argv) {
 
 static Janet cfun_SetMaterialTexture(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 3);
+    Janet result = janet_wrap_nil();
     Material *material = jaylib_getmaterial(argv, 0);
     int mapType = jaylib_getmaterialmaptype(argv, 1);
     Texture2D *texture = jaylib_gettexture2d(argv, 2);
+
+    if(material->maps[mapType].texture.id != texture->id) {
+        Texture2D *oldTexture = janet_abstract(&AT_Texture2D, sizeof(Texture2D));
+        *oldTexture = material->maps[mapType].texture;
+        result = janet_wrap_abstract(oldTexture);
+    }
     SetMaterialTexture(material, mapType, *texture);
-    return janet_wrap_nil();
+    return result;
 }
 
 static Janet cfun_SetModelMeshMaterial(int32_t argc, Janet *argv) {
@@ -977,5 +984,7 @@ static JanetReg threed_cfuns[] = {
         "(get-ray-collision-quad ray p1 p2 p3 p4)\n\n"
         "Get collision info between ray and quad"    
     },
+    {"draw-circle-3d", cfun_DrawCircle3D, NULL},
+
     {NULL, NULL, NULL}
 };

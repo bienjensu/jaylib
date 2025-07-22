@@ -45,7 +45,6 @@ typedef struct {
 
 static const KeyDef key_defs[] = {
     {"'", KEY_APOSTROPHE},
-    {",", KEY_COMMA},
     {"-", KEY_MINUS},
     {".", KEY_PERIOD},
     {"/", KEY_SLASH},
@@ -67,6 +66,7 @@ static const KeyDef key_defs[] = {
     {"backspace", KEY_BACKSPACE},
     {"c", KEY_C},
     {"caps-lock", KEY_CAPS_LOCK},
+    {"comma", KEY_COMMA},
     {"d", KEY_D},
     {"delete", KEY_DELETE},
     {"down", KEY_DOWN},
@@ -193,7 +193,8 @@ static const KeyDef uniform_type_defs[] = {
     {"int", SHADER_UNIFORM_INT},
     {"vec2", SHADER_UNIFORM_VEC2},
     {"vec3", SHADER_UNIFORM_VEC3},
-    {"vec4", SHADER_UNIFORM_VEC4}
+    {"vec4", SHADER_UNIFORM_VEC4},
+    {"sampler2d", SHADER_UNIFORM_SAMPLER2D}
 };
 
 static int jaylib_castdef(const Janet *argv, int32_t n, const KeyDef *defs, int count) {
@@ -364,6 +365,18 @@ static Rectangle jaylib_getrect(const Janet *argv, int32_t n) {
     };
 }
 
+static Janet jaylib_wrap_rect(Rectangle r) {
+    Janet *jr = janet_tuple_begin(4);
+
+    jr[0] = janet_wrap_number(r.x);
+    jr[1] = janet_wrap_number(r.y);
+    jr[2] = janet_wrap_number(r.width);
+    jr[3] = janet_wrap_number(r.height);
+
+    return janet_wrap_tuple(janet_tuple_end(jr));
+}
+
+
 static Ray jaylib_getray(const Janet *argv, int32_t n) {
     JanetView idx = janet_getindexed(argv, n);
     if (idx.len < 2) {
@@ -394,6 +407,32 @@ static Matrix jaylib_getmatrix(const Janet *argv, int32_t n) {
         idx_getfloat(idx, 14),
         idx_getfloat(idx, 15),
     };
+}
+
+static Janet jaylib_wrap_matrix(Matrix c) {
+    Janet *jc = janet_tuple_begin(16);
+
+    jc[0] = janet_wrap_number(c.m0);
+    jc[1] = janet_wrap_number(c.m4);
+    jc[2] = janet_wrap_number(c.m8);
+    jc[3] = janet_wrap_number(c.m12);
+
+    jc[4] = janet_wrap_number(c.m1);
+    jc[5] = janet_wrap_number(c.m5);
+    jc[6] = janet_wrap_number(c.m9);
+    jc[7] = janet_wrap_number(c.m13);
+
+    jc[8] = janet_wrap_number(c.m2);
+    jc[9] = janet_wrap_number(c.m6);
+    jc[10] = janet_wrap_number(c.m10);
+    jc[11] = janet_wrap_number(c.m14);
+
+    jc[12] = janet_wrap_number(c.m3);
+    jc[13] = janet_wrap_number(c.m7);
+    jc[14] = janet_wrap_number(c.m11);
+    jc[15] = janet_wrap_number(c.m15);
+
+    return janet_wrap_tuple(janet_tuple_end(jc));
 }
 
 static const KeyDef nine_patch_layouts[] = {
@@ -478,16 +517,51 @@ static Janet jaylib_wrap_vec3(Vector3 x) {
     return janet_wrap_tuple(janet_tuple_end(tup));
 }
 
+static Janet jaylib_wrap_vec4(Vector4 x) {
+    Janet *tup = janet_tuple_begin(4);
+    tup[0] = janet_wrap_number(x.x);
+    tup[1] = janet_wrap_number(x.y);
+    tup[2] = janet_wrap_number(x.z);
+    tup[3] = janet_wrap_number(x.w);
+    return janet_wrap_tuple(janet_tuple_end(tup));
+}
+
+static Janet jaylib_wrap_ray(Ray r) {
+    Janet *tup = janet_tuple_begin(2);
+    tup[0] = jaylib_wrap_vec3(r.position);
+    tup[1] = jaylib_wrap_vec3(r.direction);
+    return janet_wrap_tuple(janet_tuple_end(tup));
+}
+
+static Janet jaylib_wrap_rectangle(Rectangle r) {
+    Janet *tup = janet_tuple_begin(4);
+    tup[0] = janet_wrap_number(r.x);
+    tup[1] = janet_wrap_number(r.y);
+    tup[2] = janet_wrap_number(r.width);
+    tup[3] = janet_wrap_number(r.height);
+    return janet_wrap_tuple(janet_tuple_end(tup));
+}
+
+static Janet jaylib_wrap_color(Color c) {
+    Janet *t = janet_tuple_begin(4);
+    t[0] = janet_wrap_number(c.r / 255);
+    t[1] = janet_wrap_number(c.g / 255);
+    t[2] = janet_wrap_number(c.b / 255);
+    t[3] = janet_wrap_number(c.a / 255);
+    return janet_wrap_tuple(janet_tuple_end(t));
+}
+
+// see https://github.com/andrewchambers/janet-big/blob/9c658502c88f1ec3ebb80e2486068da41a346b52/big.c#L76
 static const JanetAbstractType AT_TextureCubemap = {
     "jaylib/texture-cubemap",
     JANET_ATEND_NAME
 };
 
-/*
+
 static TextureCubemap *jaylib_gettexturecubemap(const Janet *argv, int32_t n) {
     return ((TextureCubemap *)janet_getabstract(argv, n, &AT_TextureCubemap));
 }
-*/
+
 static const JanetAbstractType AT_Shader = {
     "jaylib/shader",
     JANET_ATEND_NAME
@@ -512,25 +586,25 @@ static Texture2D *jaylib_gettexture2d(const Janet *argv, int32_t n) {
 }
 
 int texture2d_get(void* p, Janet key, Janet *out) {
-	Texture2D *texture = (Texture2D *) p;
-	
-	if (!janet_checktype(key, JANET_KEYWORD)) {
-		janet_panic("expected keyword");
-	}
+    Texture2D *texture = (Texture2D *) p;
+    
+    if (!janet_checktype(key, JANET_KEYWORD)) {
+        janet_panic("expected keyword");
+    }
 
-	const uint8_t *kw = janet_unwrap_keyword(key);
+    const uint8_t *kw = janet_unwrap_keyword(key);
 
-	if (!janet_cstrcmp(kw, "width")) {
-		*out = janet_wrap_integer(texture->width);
-		return 1;
-	}
-	
-	if (!janet_cstrcmp(kw, "height")) {
-		*out = janet_wrap_integer(texture->height);
-		return 1;
-	}
-	
-	return 0;
+    if (!janet_cstrcmp(kw, "width")) {
+        *out = janet_wrap_integer(texture->width);
+        return 1;
+    }
+    
+    if (!janet_cstrcmp(kw, "height")) {
+        *out = janet_wrap_integer(texture->height);
+        return 1;
+    }
+    
+    return 0;
 }
 
 static const JanetAbstractType AT_Image = {
@@ -760,4 +834,13 @@ static const unsigned char *jaylib_getunsignedcstring(const Janet *argv, int32_t
         return (const unsigned char *)buf->data;
     }
     return (const unsigned char *)janet_getcstring(argv, n);
+}
+
+static const JanetAbstractType AT_VrDeviceInfo = {
+    "jaylib/vr-device-info",
+    JANET_ATEND_NAME
+};
+
+static VrDeviceInfo *jaylib_getvrdeviceinfo(const Janet *argv, int32_t n) {
+    return ((VrDeviceInfo *)janet_getabstract(argv, n, &AT_VrDeviceInfo));
 }
